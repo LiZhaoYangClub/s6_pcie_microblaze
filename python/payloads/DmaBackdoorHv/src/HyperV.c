@@ -711,6 +711,41 @@ VOID *HyperVHook(VOID *Image)
                     HookLen = 5;
                     Version = 22621;
                 }
+                /*
+                    Match hvix64.sys VM exit handler signature for Windows 11 24H2:
+
+                        ...
+
+                        .text:FFFFF800003A7445      mov     [rsp+arg_20], rcx
+                        .text:FFFFF800003A744A      mov     rcx, [rsp+arg_18]
+                        .text:FFFFF800003A744F      mov     rcx, [rcx]
+                        .text:FFFFF800003A7452      mov     [rcx], rax
+                        .text:FFFFF800003A7455      mov     [rcx+10h], rdx
+                        
+                        ...
+
+                        .text:FFFFF800003A7485      mov     [rcx+78h], r15
+                        .text:FFFFF800003A7489      mov     rax, [rsp+arg_20]
+                        .text:FFFFF800003A748E      mov     [rcx+8], rax
+                        .text:FFFFF800003A7492      lea     rax, [rcx+70h]
+                        
+                        ...
+
+                        .text:FFFFF800003A7576      sti
+                        .text:FFFFF800003A7577      mov     edx, esi
+                        .text:FFFFF800003A7579      or      edx, [rsp+arg_28]
+                        .text:FFFFF800003A757D      call    sub_FFFFF8000035CB70
+                */
+                else if (*(Func + 0x00) == 0x48 && *(Func + 0x01) == 0x89 && *(Func + 0x02) == 0x4c && *(Func + 0x03) == 0x24 &&
+                         *(Func + 0x0d) == 0x48 && *(Func + 0x0e) == 0x89 && *(Func + 0x0f) == 0x01 &&
+                         *(Func + 0x10) == 0x48 && *(Func + 0x11) == 0x89 && *(Func + 0x12) == 0x51 && *(Func + 0x13) == 0x10 &&
+                         *(Func + 0x40) == 0x4c && *(Func + 0x41) == 0x89 && *(Func + 0x42) == 0x79 && *(Func + 0x43) == 0x78 &&
+                         *(Func + 0x138) == 0xe8)
+                {
+                    Func = (UINT8 *)JUMP32_ADDR(Func + 0x138);
+                    HookLen = 5;
+                    Version = 26100;
+                }
                 else
                 {
                     Func = NULL;

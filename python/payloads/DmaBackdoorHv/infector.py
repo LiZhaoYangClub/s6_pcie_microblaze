@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, os, time
+import sys, os, time, shutil
 from struct import pack, unpack
 from optparse import OptionParser, make_option
 
@@ -17,10 +17,13 @@ align_down = lambda x, a: (x // a) * a
 
 def patch_win_boot_mgr_integrity(data):
 
+    # scan image file contents
     for i in range(0, len(data) - 0x100):
 
+        found = False
+
         '''
-            Check for bootmgr!BmFwVerifySelfIntegrity() signature:
+            Check for bootmgr!BmFwVerifySelfIntegrity() signature for Windows 10:
 
                 mov     [rsp-30h+arg_0], ecx
                 push    rbp
@@ -38,10 +41,37 @@ def patch_win_boot_mgr_integrity(data):
                 or      [rbp+arg_0], 0FFFFFFFFh
                 or      [rbp+arg_8], 0FFFFFFFFh
         '''
-
         if data[i + 0x00] == '\x89' and data[i + 0x01] == '\x4c' and \
            data[i + 0x26] == '\x83' and data[i + 0x27] == '\x4d' and data[i + 0x28] == '\x38' and data[i + 0x29] == '\xff' and \
            data[i + 0x2a] == '\x83' and data[i + 0x2b] == '\x4d' and data[i + 0x2c] == '\x40' and data[i + 0x2d] == '\xff':
+
+            found = True
+
+        '''
+            Check for bootmgr!BmFwVerifySelfIntegrity() signature for Windows 11:
+
+                mov     [rsp-28h+arg_0], ecx
+                push    rbp
+                push    rbx
+                push    rsi
+                push    rdi
+                push    r14
+                mov     rbp, rsp
+                sub     rsp, 70h
+                and     [rbp+Size], 0
+                xorps   xmm0, xmm0
+                and     [rbp+var_38], 0
+                xor     edi, edi
+                or      [rbp+arg_8], 0FFFFFFFFh
+                or      [rbp+arg_0], 0FFFFFFFFh
+        '''
+        if data[i + 0x00] == '\x89' and data[i + 0x01] == '\x4c' and \
+           data[i + 0x20] == '\x83' and data[i + 0x21] == '\x4d' and data[i + 0x22] == '\x38' and data[i + 0x23] == '\xff' and \
+           data[i + 0x24] == '\x83' and data[i + 0x25] == '\x4d' and data[i + 0x26] == '\x30' and data[i + 0x27] == '\xff':
+
+            found = True
+
+        if found:
 
             # xor eax, eax / ret
             patch = '\x33\xc0\xc3'

